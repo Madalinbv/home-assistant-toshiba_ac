@@ -54,6 +54,12 @@
       },
       "high_power_mode": {
         "name": "High Power Mode"
+      },
+      "hada_care_mode": {
+        "name": "Hada Care"
+      },
+      "sleep_care_mode": {
+        "name": "Sleep Care"
       }
     }
   }
