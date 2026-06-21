@@ -122,9 +122,25 @@ _SWITCH_DESCRIPTIONS: Sequence[ToshibaAcSwitchDescription] = [
         ac_on_value=ToshibaAcMeritA.HIGH_POWER,
         ac_off_value=ToshibaAcMeritA.OFF,
     ),
+    ToshibaAcEnumSwitchDescription(
+        key="hada_care_mode",
+        translation_key="hada_care_mode",
+        icon="mdi:face-woman-shimmer",
+        ac_attr_name="ac_merit_a",
+        ac_on_value=ToshibaAcMeritA.COMFORT,
+        ac_off_value=ToshibaAcMeritA.OFF,
+    ),
+    ToshibaAcEnumSwitchDescription(
+        key="sleep_care_mode",
+        translation_key="sleep_care_mode",
+        icon="mdi:sleep",
+        ac_attr_name="ac_merit_a",
+        ac_on_value=ToshibaAcMeritA.SLEEP_CARE,
+        ac_off_value=ToshibaAcMeritA.OFF,
+    ),
 ]
 
-
+_FORCED_SWITCH_KEYS = {"hada_care_mode", "sleep_care_mode"}
 async def async_setup_entry(hass, config_entry, async_add_devices):
     """Add switch entities for passed config_entry in HA."""
     device_manager = hass.data[DOMAIN][config_entry.entry_id]
@@ -133,7 +149,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
     devices: list[ToshibaAcDevice] = await device_manager.get_devices()
     for device in devices:
         for entity_description in _SWITCH_DESCRIPTIONS:
-            if entity_description.is_supported(device.supported):
+            if entity_description.key in _FORCED_SWITCH_KEYS or entity_description.is_supported(device.supported):
                 new_entities.append(ToshibaAcSwitchEntity(device, entity_description))
             else:
                 _LOGGER.debug(
