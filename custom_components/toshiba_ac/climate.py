@@ -80,6 +80,10 @@ class ToshibaClimate(ToshibaAcStateEntity, ClimateEntity):
         self._attr_unique_id = f"{self._device.ac_unique_id}_climate"
         self._attr_fan_modes = get_feature_list(self._device.supported.ac_fan_mode)
         self._attr_swing_modes = get_feature_list(self._device.supported.ac_swing_mode)
+        # Devices with FIXED_1-5 support (merit_bits[14]=True) also support H.DA airflow
+        # (raw 0x60). Add "Hada" to the list so it appears in the swing mode dropdown.
+        if "Fixed 1" in self._attr_swing_modes and "Hada" not in self._attr_swing_modes:
+            self._attr_swing_modes = list(self._attr_swing_modes) + ["Hada"]
 
     @property
     def is_on(self):
@@ -209,15 +213,26 @@ class ToshibaClimate(ToshibaAcStateEntity, ClimateEntity):
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
-        swing_mode = swing_mode.title().replace("_", " ")
-        feature_list_id = get_feature_by_name(list(ToshibaAcSwingMode), swing_mode)
+        normalized = swing_mode.title().replace("_", " ")
+        if normalized == "Hada":
+            # H.DA airflow: raw value 0x60, not in the standard enum.
+            # Bypass enum lookup and send the raw byte directly.
+            from toshiba_ac.device.fcu_state import ToshibaAcFcuState as _FcuState
+            _state = _FcuState()
+            _state._ac_swing_mode = 0x60
+            await self._device.send_state_to_ac(_state)
+            return
+        feature_list_id = get_feature_by_name(list(ToshibaAcSwingMode), normalized)
         if feature_list_id is not None:
             await self._device.set_ac_swing_mode(feature_list_id)
 
     @property
     def swing_mode(self) -> str | None:
         """Return the swing setting."""
-        return pretty_enum_name(self._device.ac_swing_mode)
+        try:
+            return pretty_enum_name(self._device.ac_swing_mode)
+        except Exception:
+            return None
 
     @property
     def current_temperature(self) -> float | None:
